@@ -1,0 +1,6 @@
+{
+    "hello": "world",
+    "ref": {
+        "$ref": "file:data/hello-world.json"
+    }
+}
