@@ -1,9 +1,13 @@
 import argparse
 import os
+import sys
 import contextlib
 import json
+import logging
 
 import pyJsJson
+
+logger = logging.getLogger(__name__)
 
 def get_arg_parser():
     parser = argparse.ArgumentParser(description='Render JSON using a JSON template')
@@ -13,6 +17,8 @@ def get_arg_parser():
     return parser
 
 def main(args):
+    pyJsJson.util.logging.configureCliLogging()
+    logger.info('**** STARTED ****')
     args = get_arg_parser().parse_args(args)
 
     input_fname = os.path.abspath(args.input)
@@ -22,9 +28,15 @@ def main(args):
         os.path.dirname(input_fname)
     )
 
-    ds = pyJsJson.dataSource.DataSource(search_dirs)
-    expand = pyJsJson.expand.JsonExpand(ds)
-    out = expand.expandData(ds.loadJsonFile(input_fname))
+    ds = pyJsJson.dataSource.DataSource()
+    searcher = ds.searchDirs(search_dirs)
+
+    expand = pyJsJson.expand.JsonExpand(ds, searcher)
+    expand.loadCommands(pyJsJson.commands.DEFAULT_COMMANDS)
+
+    out = expand.expandData(
+        searcher.loadJsonFile(input_fname)
+    )
 
     with contextlib.ExitStack() as stack:
         if args.output == '-':
