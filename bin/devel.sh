@@ -1,19 +1,9 @@
-#!/bin/bash -xe
+#!/bin/bash -e
 
-BIN_DIR=$(readlink -f $(dirname "${BASH_SOURCE[0]}"))
-PROJ_ROOT="${BIN_DIR}/.."
-BUILD_DIR="${PROJ_ROOT}/build"
-DEV_VENV_DIR="${BUILD_DIR}/devel-env"
-PYTHON='python3'
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
-if [ ! -e "${BUILD_DIR}" ]
-then
-    mkdir -p "${BUILD_DIR}"
-fi
+ENV_NAME='py-js-json-dev'
+init_venv "${DEV_ENV_NAME}"
 
-if [ ! -e "${DEV_VENV_DIR}" ]
-then
-    "${PYTHON}" -m venv --prompt 'py-js-json-dev'  "${DEV_VENV_DIR}"
-fi
-
-exec bash --rcfile <(echo '. ~/.bashrc;' "cd '${PROJ_ROOT}' ; . '${DEV_VENV_DIR}/bin/activate'")
+maybe_run_pip_install "${DEV_ENV_NAME}" "${REQUIREMENTS_DIR}/development.txt"
+exec bash --rcfile <(echo '. ~/.bashrc;' "cd '${PROJ_ROOT}' ; . '$(get_venv_root "${DEV_ENV_NAME}")/bin/activate'")
