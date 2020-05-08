@@ -56,7 +56,10 @@ class JsonTree:
 
             for cls in self.commandConstructors:
                 if cls.match(rebuilt_dict):
-                    out_obj = cls(self, rebuilt_dict)
+                    out_obj = cls(
+                        self, rebuilt_dict,
+                        child_commands=tuple(out_expandable),
+                    )
                     out_expandable.append(out_obj)
                     break
             else:

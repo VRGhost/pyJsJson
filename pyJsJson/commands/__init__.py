@@ -1,3 +1,5 @@
+from . import exceptions
+
 # $-prefixed default commands
 from .ref import Ref
 
