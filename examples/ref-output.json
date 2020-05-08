@@ -1,0 +1,7 @@
+{
+    "hello": "world",
+    "ref": {
+        "this": "is hello-world.json",
+        "from": "data dir"
+    }
+}
