@@ -1,0 +1,13 @@
+language: python
+
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+
+install:
+  - pip install -r requirements/development.txt
+  - pip freeze # Print versions of all installed packages for logging purposes
+script:
+  - py.test -m pep8
+  - py.test
