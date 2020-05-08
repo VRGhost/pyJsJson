@@ -1,6 +1,14 @@
 import copy
+import collections
+import logging
 
 from . import exceptions
+
+from .. import base as parentBase
+
+
+logger = logging.getLogger(__name__)
+
 
 class PrimitiveDataValidator:
     """A class to perform validation of primitive data types (int, str, ...)"""
@@ -34,30 +42,53 @@ class PrimitiveDataValidator:
             self.input_type
         )
 
+
 class DictValidator(PrimitiveDataValidator):
     """A validator that validates input dictionary."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        requiredKeys=(),
+        defaults=None,  # key -> value for default keys that are not required.
+        inputDataTypes=None,  # key -> callable for user-provided data values
+    ):
         super(DictValidator, self).__init__(
             input_type=dict,
             validate_input_fn=self._validateDict,
             cast_func=self._castDict,
         )
 
-class Base:
+        self.requiredKeys = frozenset(requiredKeys)
+        self.defaults = defaults or {}
+        self.inputTypes = inputDataTypes or {}
+
+    def validate(self, data):
+        if not isinstance(data, collections.Mapping):
+            return False
+
+        missingReq = self.requiredDataKeys.difference(inp.keys())
+        if missingReq:
+            logger.error("Missing required keys: {}".format(missingReq))
+            return False
+
+        for key in (self.inputTypes.keys() & data.keys):
+            1/0
+
+    def cast(self, data):
+        1/0
+
+
+class Base(parentBase.Expandable):
     """Base class for commands."""
 
     key = None  # The key for the command (e.g. '$ref')
+    validator = None  # instance of PrimitiveDataValidator
 
-    requiredDataKeys = frozenset([]) # What keys MUST be provided in the input data
-    defaultDataValues = {} # key -> value for default keys that are not required.
-    inputDataTypes = {} # key -> callable for user-provided data values
-
-    def __init__(self, expander, json_el, child_commands):
-        self.expander = expander
+    def __init__(self, parent_tree, json_el, child_commands):
+        self.parentTree = parent_tree
         self._element = json_el
         self._children = tuple(child_commands)
-        self._expanded = False  # Set to 'True' when expansion of the current element is complete
+        self._dependsOn = self._children
 
     @classmethod
     def match(cls, what):
@@ -71,43 +102,52 @@ class Base:
     def data(self):
         """Return sanitised version of input arguments."""
         inp = self._element[self.key]
-
-        missingReq = self.requiredDataKeys.difference(inp.keys())
-        if missingReq:
-            raise exceptions.InvalidInputDataError("Missing required keys: {}".format(missingReq))
-
-        out = copy.deepcopy(self.defaultDataValues)
-
-        for (key, value) in inp.items():
-            if key in self.inputDataTypes:
-                cast_fn = self.inputDataTypes[key]
-                cast_val = cast_fn(value)
-            else:
-                cast_val = value
-            out[key] = cast_val
-
-        return out
+        if not self.validator.validate(inp):
+            raise exceptions.InvalidInputDataError('Invalid input data')
+        return self.validator.cast(inp)
 
     @property
     def dependsOn(self):
         """Return a list of commands that must be expanded BEFORE this command is expandable."""
-        return self._children
+        return self._dependsOn
 
-    @property
-    def expanded(self):
+    def isExpanded(self):
         for dep in self.dependsOn:
-            if not dep.expanded:
+            if not dep.isExpanded():
                 return False
+        return self.hasResult()
 
-        return self._expanded
+    def getResult(self):
+        return self._result
 
-    def tryExpand(self):
-        if not self.expanded:
-            self.expand()
-            self._expanded = True
+    def setResult(self, newVal):
+        if self.hasResult():
+            raise exceptions.CommandException('The command already has a result')
+        self._result = newVal
+        assert self.hasResult()
 
-    def expand(self):
-        raise NotImplementedError(self.__class__)
+    def addDependency(self, newDep):
+        """Add a new dependency that had just been discovered."""
+        self._dependsOn += (newDep, )
+
+    def hasResult(self):
+        return hasattr(self, '_result')
 
     def __repr__(self):
         return "<{} {!r}>".format(self.__class__.__name__, self.key)
+
+
+class StatefulBase(Base):
+    """A command that transitions through multiple implementations of expand() code.
+
+    The implementations of the expand function should return next function to be called or None
+    """
+
+    _expandFn = None
+
+    def expandStep(self):
+        if callable(self._expandFn):
+            assert not self.hasResult(), 'There has to be NO result set if the expand() chain is not done'
+            self._expandFn = self._expandFn()
+        else:
+            assert self.hasResult(), 'There has to be a result set if the expand() chain is done'

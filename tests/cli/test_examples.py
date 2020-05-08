@@ -44,7 +44,8 @@ def test_examples(cli_popen_args, EXAMPLES_DIR, update_path_by):
         else:
             raise NotImplementedError(update_path_by)
 
-        out_json = subprocess.check_call(**call_args)
+        out_json = subprocess.check_output(**call_args)
+        out_json = json.loads(out_json)
         with open(exampele_files[expected_out_fname], 'r') as fin:
             expected_out = json.load(fin)
         assert out_json == expected_out

@@ -36,10 +36,16 @@ def main(args):
 
     expand = pyJsJson.expand.JsonExpand()
     expand.loadCommands(pyJsJson.commands.DEFAULT_COMMANDS)
-    out = expand.expandFile(
+    tree = expand.loadJsonFile(
         input_fname,
         search_dirs
     )
+
+    # Expand the tree
+    while not tree.isExpanded():
+        tree.expandStep()
+
+    out = tree.getResult()
 
     with contextlib.ExitStack() as stack:
         if args.output == '-':
@@ -49,3 +55,5 @@ def main(args):
             stack.enter_context(outf)  # ensure that the file will be closed
 
         json.dump(out, outf, indent=4, sort_keys=True)
+
+    return True  # Report success

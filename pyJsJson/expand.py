@@ -1,15 +1,20 @@
 """Main functional class."""
 import collections
 
-from . import dataSource
+from . import (
+    dataSource,
+    base,
+)
 
-class JsonTree:
+
+class JsonTree(base.Expandable):
     """An object constructed from raw input json dictionary.
 
     Has all respective fields replaced with Expandable objects.
     """
 
-    def __init__(self, raw_json, commandConstructors):
+    def __init__(self, expander, raw_json, commandConstructors, searchDirs):
+        self.expander = expander
         self.commandConstructors = commandConstructors
         (
             self._tree,
@@ -17,13 +22,9 @@ class JsonTree:
         ) = self._buildSourceTree(raw_json)
 
         self._allExpandableObjs = list(self._allExpandableObjs)
+        self.searchDirs = searchDirs
 
-    def expand(self):
-        """Expand this tree until done."""
-        while not self.expanded:
-            self._expandStep()
-
-    def _expandStep(self):
+    def expandStep(self):
         # FIXME: just a tmp implementation (circular buffer).
         # Takes the first expandable element, attempts to expand it
         # and puts it back into the list last
@@ -34,11 +35,37 @@ class JsonTree:
         target.tryExpand()
         self._allExpandableObjs.append(target)
 
-    @property
-    def expanded(self):
+    def isExpanded(self):
         """Return True when all expandable objects had been expanded."""
-        return all(obj.expanded for obj in self._allExpandableObjs)
+        return all(obj.isExpanded() for obj in self._allExpandableObjs)
 
+    def getResult(self):
+
+        def _buildOutObject(data):
+            try:
+                out_fn = data.getResult
+            except AttributeError:
+                # Not an expandable object
+                out_fn = None
+
+            if callable(out_fn):
+                # An expandable object
+                out = out_fn()
+            elif isinstance(data, collections.Mapping):
+                out = dict(
+                    (key, _buildOutObject(val))
+                    for (key, val) in data.items()
+                )
+            elif isinstance(data, (tuple, list)):
+                out = tuple(
+                    _buildOutObject(el)
+                    for el in data
+                )
+            else:
+                out = data
+            return out
+
+        return _buildOutObject(self._tree)
 
     def _buildSourceTree(self, data):
         """Convert 'data' object to a rich object with command handlers in place.
@@ -84,9 +111,18 @@ class JsonTree:
             out_expandable = ()
         return (out_obj, tuple(out_expandable))
 
+    def loadJsonFile(self, path):
+        # Load another JSON file.
+        tree = self.expander.loadJsonFile(
+            path,
+            self.searchDirs
+        )
+        self._allExpandableObjs.append(tree)
+        return tree
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, self._tree)
+
 
 class JsonExpand:
 
@@ -97,7 +133,7 @@ class JsonExpand:
     def loadCommands(self, newCommands):
         self.commandConstructors += tuple(newCommands)
 
-    def expandFile(self, filePath, search_dirs):
+    def loadJsonFile(self, filePath, search_dirs):
         """Expand a particular file.
 
         search_dirs MUST be provided so the expander knows
@@ -105,19 +141,16 @@ class JsonExpand:
         """
         searcher = self.fileSource.searchDirs(search_dirs)
         raw_json = searcher.loadJsonFile(filePath)
-        return self._expandRawData(raw_json, searcher)
+        return self._toTree(raw_json, searcher)
 
-    def expandData(self, data, search_dirs=()):
+    def loadData(self, data, search_dirs=()):
         searcher = self.fileSource.searchDirs(search_dirs)
-        return self._expandRawData(data, searcher)
+        return self._toTree(data, searcher)
 
-    def _expandRawData(self, data, searcher):
-        tree = JsonTree(
+    def _toTree(self, data, searcher):
+        return JsonTree(
+            self,
             data,
             self.commandConstructors,
+            searcher.searchDirs,
         )
-        print(tree)
-        tree.expand()
-        print(tree)
-        1/0
-

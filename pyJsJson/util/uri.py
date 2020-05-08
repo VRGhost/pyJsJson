@@ -11,7 +11,7 @@ class URI:
         self.anchor = anchor
 
     @classmethod
-    def fromString(self, val):
+    def fromString(cls, val):
         parseResult = urllib.parse.urlparse(val)
         return cls(
             scheme=parseResult.scheme or None,
