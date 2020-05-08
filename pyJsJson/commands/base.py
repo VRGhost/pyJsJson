@@ -6,6 +6,7 @@ class Base:
     def __init__(self, expander, data):
         self.expander = expander
         self.data = data
+        self.expanded = False
 
     @classmethod
     def match(cls, what):
@@ -14,6 +15,13 @@ class Base:
         if cls.key not in what:
             return False
         return True
+
+    def tryExpand(self):
+        if not self.expanded:
+            self.expand()
+
+    def expand(self):
+        raise NotImplementedError(self.__class__)
 
     def __repr__(self):
         return "<{} {!r}>".format(self.__class__.__name__, self.key)

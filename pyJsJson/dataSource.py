@@ -10,11 +10,10 @@ from . import exceptions
 logger = logging.getLogger(__name__)
 
 
-class DataSource:
+class FileSource:
 
     def __init__(self):
         self._cache = {}
-        self._currentSearchDirs = None
 
     def _loadJsonFile(self, path):
         try:

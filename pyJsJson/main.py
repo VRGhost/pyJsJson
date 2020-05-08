@@ -34,14 +34,11 @@ def main(args):
         os.path.dirname(input_fname)
     )
 
-    ds = pyJsJson.dataSource.DataSource()
-    searcher = ds.searchDirs(search_dirs)
-
-    expand = pyJsJson.expand.JsonExpand(ds, searcher)
+    expand = pyJsJson.expand.JsonExpand()
     expand.loadCommands(pyJsJson.commands.DEFAULT_COMMANDS)
-
-    out = expand.expandData(
-        searcher.loadJsonFile(input_fname)
+    out = expand.expandFile(
+        input_fname,
+        search_dirs
     )
 
     with contextlib.ExitStack() as stack:
