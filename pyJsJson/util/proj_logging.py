@@ -1,5 +1,6 @@
 import logging.config
 
+
 def configureCliLogging():
     """Configure the logging for the case when the program is ran as standalone code."""
     logging.config.dictConfig({

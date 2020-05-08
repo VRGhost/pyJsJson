@@ -39,7 +39,7 @@ def test_examples(cli_popen_args, EXAMPLES_DIR, update_path_by):
             call_args['cwd'] = EXAMPLES_DIR
         elif update_path_by == 'cli_arg':
             # cwd somewhere meaningless so the relative path lookups fail
-            call_args['cwd'] = os.path.abspath(os.sep) # This is FS root
+            call_args['cwd'] = os.path.abspath(os.sep)  # This is FS root
             call_args['args'] += ('--search-dirs', EXAMPLES_DIR)
         else:
             raise NotImplementedError(update_path_by)

@@ -1,7 +1,7 @@
 class Base:
     """Base class for commands."""
 
-    key = None # The key for the command (e.g. '$ref')
+    key = None  # The key for the command (e.g. '$ref')
 
     def __init__(self, expander, data):
         self.expander = expander

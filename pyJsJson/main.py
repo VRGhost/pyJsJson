@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 def get_arg_parser():
     parser = argparse.ArgumentParser(description='Render JSON using a JSON template')
     parser.add_argument('input', help='Input JSON to be rendered')
-    parser.add_argument('--search-dirs', default=(), nargs='*', help='Extra directories to be included into the search path')
+    parser.add_argument(
+        '--search-dirs',
+        default=(), nargs='*',
+        help='Extra directories to be included into the search path'
+    )
     parser.add_argument('--output', default='-', help='Output file ("-" for stdout)')
     return parser
 
@@ -45,6 +49,6 @@ def main(args):
             outf = sys.stdout
         else:
             outf = open(args.output, 'w')
-            stack.enter_context(outf) # ensure that the file will be closed
+            stack.enter_context(outf)  # ensure that the file will be closed
 
         json.dump(out, outf, indent=4, sort_keys=True)

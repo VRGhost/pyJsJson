@@ -1,6 +1,7 @@
 import urllib.parse
 import posixpath as pp
 
+
 class URI:
     """URI object."""
 

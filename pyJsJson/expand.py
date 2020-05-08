@@ -1,6 +1,7 @@
 """Main functional class."""
 import collections
 
+
 class JsonExpand:
 
     def __init__(self, dataSource, rootFileSearcher):
