@@ -13,10 +13,26 @@ class URI:
     @classmethod
     def fromString(cls, val):
         parseResult = urllib.parse.urlparse(val)
+
+        full_path = []
+        if parseResult.netloc:
+            full_path.append(parseResult.netloc)
+        if parseResult.path:
+            full_path.append(parseResult.path)
+
         return cls(
             scheme=parseResult.scheme or None,
-            path=pp.join(parseResult.netloc, parseResult.path) or None,
+            path=pp.join(*full_path) if full_path else None,
             anchor=parseResult.fragment or None
+        )
+
+    def defaults(self, scheme=None, path=None, anchor=None):
+        """Return a new URI object with any missing elements replaced with new defaults."""
+        cls = self.__class__
+        return cls(
+            scheme=self.scheme or scheme,
+            path=self.path or path,
+            anchor=self.anchor or anchor,
         )
 
     def toString(self):

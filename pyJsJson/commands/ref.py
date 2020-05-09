@@ -21,12 +21,19 @@ def walk_path_in_dict(target, path):
             raise exceptions.ExpansionFailure(
                 "Failed to access key {key!r} in {out}. "
                 "Path traversed so far: {pth}, original input: {inp}".format(
-                    key=key, out=out, pth=walked, inp=orig_inp
+                    key=key, out=out, pth=traversed, inp=orig_inp
                 )
             )
         traversed.append(key)
     return out
 
+
+def _parseRefUri(val):
+    uri = URI.fromString(val)
+    return uri.setDefault(
+        scheme='file',
+        path='???'
+    )
 
 class Ref(base.StatefulBase):
     """$ref expander."""
@@ -35,7 +42,7 @@ class Ref(base.StatefulBase):
 
     validator = base.PrimitiveDataValidator(
         input_type=str,
-        cast_func=URI.fromString,
+        cast_func=_parseRefUri,
     )
 
     _waitingForTree = None
@@ -65,7 +72,7 @@ class Ref(base.StatefulBase):
         out = self._waitingForTree.getResult()
         if sub_tree_path:
             sub_tree_path = sub_tree_path.split(pp.sep)
-
+            out = walk_path_in_dict(out, sub_tree_path)
         self.setResult(out)
         return None  # No further transitions
 

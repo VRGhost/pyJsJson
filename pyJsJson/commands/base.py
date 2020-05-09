@@ -132,7 +132,7 @@ class Base(parentBase.Expandable):
     def setResult(self, newVal):
         if self.hasResult():
             raise exceptions.CommandException('The command already has a result')
-        self._result = newVal
+        self._result = copy.deepcopy(newVal)
         assert self.hasResult()
 
     def addDependency(self, newDep):

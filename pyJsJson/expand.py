@@ -1,5 +1,5 @@
 """Main functional class."""
-import collections
+import collections.abc
 
 from . import (
     dataSource,
@@ -73,7 +73,7 @@ class JsonTree(base.Expandable):
 
         Returns (output_struct, [<all expandable objs>]) tuple
         """
-        if isinstance(data, collections.Mapping):
+        if isinstance(data, collections.abc.Mapping):
             # Recurse as deep as possible first, detecting any child objects
             rebuilt_dict = {}
             out_expandable = []
