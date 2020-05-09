@@ -111,10 +111,19 @@ class Base(parentBase.Expandable):
         """Return a list of commands that must be expanded BEFORE this command is expandable."""
         return self._dependsOn
 
-    def isExpanded(self):
+    def depsExpanded(self):
+        """Return True if all dependencies are ready."""
         for dep in self.dependsOn:
             if not dep.isExpanded():
                 return False
+        return True
+
+    def tryExpand(self):
+        # Only attempt to expand self if all dependencies are ready.
+        if self.depsExpanded():
+            return super(Base, self).tryExpand()
+
+    def isExpanded(self):
         return self.hasResult()
 
     def getResult(self):

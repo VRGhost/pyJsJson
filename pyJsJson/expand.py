@@ -13,7 +13,8 @@ class JsonTree(base.Expandable):
     Has all respective fields replaced with Expandable objects.
     """
 
-    def __init__(self, expander, raw_json, commandConstructors, searchDirs):
+    def __init__(self, label: str, expander, raw_json, commandConstructors, searchDirs):
+        self.label = label
         self.expander = expander
         self.commandConstructors = commandConstructors
         (
@@ -121,7 +122,7 @@ class JsonTree(base.Expandable):
         return tree
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, self._tree)
+        return "<{} {!r} {}>".format(self.__class__.__name__, self.label, self._tree)
 
 
 class JsonExpand:
@@ -141,14 +142,23 @@ class JsonExpand:
         """
         searcher = self.fileSource.searchDirs(search_dirs)
         raw_json = searcher.loadJsonFile(filePath)
-        return self._toTree(raw_json, searcher)
+        return self._toTree(
+            'input:{}'.format(filePath),
+            raw_json,
+            searcher
+        )
 
     def loadData(self, data, search_dirs=()):
         searcher = self.fileSource.searchDirs(search_dirs)
-        return self._toTree(data, searcher)
+        return self._toTree(
+            'input:data',
+            data,
+            searcher
+        )
 
-    def _toTree(self, data, searcher):
+    def _toTree(self, label, data, searcher):
         return JsonTree(
+            label,
             self,
             data,
             self.commandConstructors,
