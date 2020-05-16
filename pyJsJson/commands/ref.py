@@ -7,6 +7,7 @@ from ..util import URI
 from . import (
     base,
     exceptions,
+    validators,
 )
 
 
@@ -30,23 +31,25 @@ def walk_path_in_dict(target, path):
 
 def _parseRefUri(val):
     uri = URI.fromString(val)
-    return uri.setDefault(
-        scheme='file',
-        path='???'
-    )
+    if not uri.scheme and not uri.path and uri.anchor:
+        # Only anchor specified => self-reference
+        uri = uri.defaults(
+            scheme='__tree__',
+            path='__self__',
+        )
+    return uri
 
 class Ref(base.StatefulBase):
     """$ref expander."""
 
     key = '$ref'
 
-    validator = base.PrimitiveDataValidator(
+    validator = validators.PrimitiveDataValidator(
         input_type=str,
         cast_func=_parseRefUri,
     )
 
     _waitingForTree = None
-    _waitingForPath = None
 
     def expand_start(self):
         uri = self.data
@@ -55,9 +58,14 @@ class Ref(base.StatefulBase):
 
         if scheme == 'file':
             subTree = self._expandFile(uri.path)
-            self.addDependency(subTree)
-            self._waitingForTree = subTree
-            out_fn = self.expand_tree
+            self._setSubTreeResult(subTree)
+        elif scheme == '__tree__':
+            # Direct tree reference.
+            #  Only self-references are expected to work like this for now.
+            assert uri.path == '__self__', uri.path
+            raise NotImplementedError
+            self._waitingForTreeFuture = self.root.expander.getFutureResult(self.data.anchor)
+            out_fn = self.waiting_for_tree_future
         else:
             raise exceptions.UnsupportedOperation("I don't know how to expand {!r} scheme ({})".format(
                 scheme,
@@ -65,22 +73,21 @@ class Ref(base.StatefulBase):
             ))
         return out_fn
 
-    def expand_tree(self):
-        assert self._waitingForTree is not None
-        assert self._waitingForTree.isExpanded(), 'The tree I am waiting for should be expanded by now'
-        sub_tree_path = self.data.anchor
-        out = self._waitingForTree.getResult()
-        if sub_tree_path:
-            sub_tree_path = sub_tree_path.split(pp.sep)
-            out = walk_path_in_dict(out, sub_tree_path)
-        self.setResult(out)
-        return None  # No further transitions
-
     _expandFn = expand_start
+
+    def _setSubTreeResult(self, subTree):
+        """Set an element of subtree as a result."""
+        if self.data.anchor:
+            raise NotImplementedError
+        else:
+            result = subTree
+        self.setResult(result)
+        print(self, id(self))
+        assert self.hasResult()
 
     def _expandFile(self, uri_path):
         """Expand a file."""
         # A naive way to convert slashes to OS-specific flavour.
         #  TODO: find a better implementation
         os_path = uri_path.replace(pp.sep, os.sep)
-        return self.parentTree.loadJsonFile(os_path)
+        return self.root.loadJsonFile(os_path)

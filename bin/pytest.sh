@@ -1,6 +1,5 @@
 #!/bin/bash -e
 
-TEST_ARGS="$@"
 
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
@@ -13,4 +12,4 @@ then
 fi
 
 cd "${PROJ_ROOT}"
-exec python -m pytest -c "${PROJ_ROOT}/pytest.ini" "${TEST_ARGS[@]}"
+exec python -m pytest -c "${PROJ_ROOT}/pytest.ini" "$@"

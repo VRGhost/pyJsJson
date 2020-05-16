@@ -5,6 +5,7 @@ from . import (
 
 from . import (
     commands,
+    tree,
     dataSource,
     expand,
 )

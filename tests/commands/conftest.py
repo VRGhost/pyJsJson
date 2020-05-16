@@ -15,8 +15,7 @@ def expand_data():
         tree = expand.loadData(data, search_dirs=[
             os.path.join(os.sep, 'unittest')
         ])
-        while not tree.isExpanded():
-            tree.expandStep()
+        expand.expandAll()
         return tree.getResult()
 
     return _doExpand
