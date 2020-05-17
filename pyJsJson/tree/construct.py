@@ -1,13 +1,13 @@
-import collections.abc
-
 from . import (
     JsonTreeRoot,
     DictTree, ListTree,
 )
 
+from .. import util
+
 def _construct_subtree(expansion_loop, root, parent, name, data):
     _this_fn = _construct_subtree
-    if isinstance(data, collections.abc.Mapping):
+    if isinstance(data, util.collections_abc.Mapping):
         # Recurse as deep as possible first, detecting any child objects
 
         for cls in root.commandConstructors:
@@ -40,8 +40,23 @@ def _construct_subtree(expansion_loop, root, parent, name, data):
             for (key, value) in data.items()
         )
         out_obj.setInputData(rebuilt_payload)
-    elif isinstance(data, (list, tuple)):
-        raise NotImplementedError
+    elif isinstance(data, util.collections_abc.Array):
+        out_obj = ListTree(
+            expansion_loop=expansion_loop,
+            root=root,
+            parent=parent,
+            name=name,
+        )
+        out_obj.setInputData(tuple(
+            _this_fn(
+                expansion_loop=expansion_loop,
+                root=root,
+                parent=out_obj,
+                name="[{}]".format(idx),
+                data=el
+            )
+            for (idx, el) in enumerate(data)
+        ))
     else:
         # Simple/unknown type. No conversion possible
         out_obj = data

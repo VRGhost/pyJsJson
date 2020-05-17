@@ -39,13 +39,59 @@ def test_missing_ref(UnittestFs, expand_data, uri):
             'sub-key': 'value'
         }
     })
-    with pytest.raises(pyJsJson.exceptions.PyJsJsonException):
-        expand_data({'$ref': uri})
+    with pytest.raises((
+        pyJsJson.commands.exceptions.InvalidReference,
+        pyJsJson.exceptions.FsError,
+    )):
+        rv = expand_data({'$ref': uri})
+        print("RESULT WAS {!r} INSTEAD".format(rv))
 
 
-def test_self_ref(UnittestFs, expand_data):
+@pytest.mark.parametrize('path', [
+    '/value',
+    'value',
+    '/sub-dict/value',
+    '/sub-list/1',
+])
+def test_self_ref(UnittestFs, expand_data, path):
     out = expand_data({
         'value': 'hello-world',
-        'output': {'$ref': '#/value'}
+        'sub-dict': {
+            'key': 'value',
+            'value': 'hello-world'
+        },
+        'sub-list': [
+            'nope',
+            'hello-world',
+            'nope',
+        ],
+        'output': {'$ref': '#' + path}
     })
     assert out['output'] == 'hello-world'
+
+
+def test_array_access(UnittestFs, expand_data):
+    UnittestFs.mockFile('/unittest/target.json', {
+        'top-key': [
+            {'val': -1},
+            {'val': -2},
+            {'val': -3}
+        ]
+    })
+    out = expand_data({
+        '$ref': 'file:target.json#top-key/1/val'
+    })
+    assert out == -2, 'Array indeces start at zero'
+
+
+def test_accessing_array_with_key(UnittestFs, expand_data):
+    UnittestFs.mockFile('/unittest/target.json', {
+        'top-key': [
+            {'val': -1},
+            {'val': -2},
+            {'val': -3}
+        ]
+    })
+    with pytest.raises(pyJsJson.commands.exceptions.InvalidReference):
+        rv = expand_data({'$ref': 'file:target.json#top-key/mykey'})
+        print("RESULT WAS {!r} INSTEAD".format(rv))

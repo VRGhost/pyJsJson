@@ -1,35 +1,33 @@
 """Tree base class."""
 
 import functools
-import collections.abc
 
 from abc import (
     ABC,
     abstractmethod,
 )
 
-from .. import base
+from .. import base, util, exceptions
 
 
 def convertToResults(data):
     if isinstance(data, base.Expandable):
         if not data.isExpanded():
-            print('VVVVVV')
-            print(data)
-            for el in data.dependsOn():
-                print(el.isExpanded())
-            print(data, tuple(data.dependsOn()), id(data))
-            1/0
+            raise exceptions.PyJsJsonException(
+                "Attempting to build a result from an unexpanded object {!r}".format(
+                    data
+                )
+            )
         assert data.isExpanded(), data
         out = convertToResults(
             data.getResult()
         )
-    elif isinstance(data, collections.abc.Mapping):
+    elif isinstance(data, util.collections_abc.Mapping):
         out = dict(
             (key, convertToResults(value))
             for (key, value) in data.items()
         )
-    elif isinstance(data, (list, tuple)):
+    elif isinstance(data, util.collections_abc.Array):
         out = tuple(convertToResults(el) for el in data)
     else:
         # Must be a primitive object
@@ -60,7 +58,7 @@ class TreeBase(base.ExpandableData):
         """Return all expandable objects inside this tree."""
 
     @abstractmethod
-    def getStructPath(self, path):
+    def getPartialResult(self, path):
         """Return a subtree/expandable found under the chain of 'path' elements."""
 
     def dependsOn(self):

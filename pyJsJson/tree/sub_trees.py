@@ -13,11 +13,9 @@ class DictTree(base.TreeBase):
             if isinstance(el, Expandable):
                 yield el
 
-    def getStructPath(self, path):
-        key = path[0]
-        tail = path[1:]
+    def getPartialResult(self, key):
         child = self.getInputData()
-        1/0
+        return child[key]
 
 class ListTree(base.TreeBase):
     """A tree that spans a json list."""
@@ -27,5 +25,6 @@ class ListTree(base.TreeBase):
             if isinstance(el, Expandable):
                 yield el
 
-    def getStructPath(self, path):
-        1/0
+    def getPartialResult(self, key):
+        child = self.getInputData()
+        return child[int(key)]

@@ -1,33 +1,15 @@
 import os
-
 import posixpath as pp
 
-from ..util import URI
+from ..util import URI, collections_abc
 
 from . import (
     base,
     exceptions,
     validators,
 )
-
-
-def walk_path_in_dict(target, path):
-    traversed = []
-    orig_inp = target
-    out = target
-    for key in path:
-        try:
-            out = out[key]
-        except KeyError:
-            raise exceptions.ExpansionFailure(
-                "Failed to access key {key!r} in {out}. "
-                "Path traversed so far: {pth}, original input: {inp}".format(
-                    key=key, out=out, pth=traversed, inp=orig_inp
-                )
-            )
-        traversed.append(key)
-    return out
-
+from ..base import Expandable
+from ..tree import TreeCls
 
 def _parseRefUri(val):
     uri = URI.fromString(val)
@@ -39,7 +21,84 @@ def _parseRefUri(val):
         )
     return uri
 
-class Ref(base.StatefulBase):
+class RefSubtreeWalker(Expandable):
+
+    def __init__(self, expansion_loop, parent_ref, tree, path):
+        super(RefSubtreeWalker, self).__init__(expansion_loop)
+        self.parentRef = parent_ref
+        self.currentTarget = tree
+        self.fullPath = self.pathRemaining = tuple(path)
+        self._result = None
+
+    def dependsOn(self):
+        return (
+            self.currentTarget,
+        )
+
+    def expandStep(self):
+        new_remaining = list(self.pathRemaining)
+        new_target = self.currentTarget
+
+         # A function to mark if branches that have actually consumed an element of walkable path
+        _consumeKey = lambda: new_remaining.pop(0)
+        while new_remaining:
+            key = new_remaining[0]
+            if isinstance(new_target, collections_abc.Mapping):
+                try:
+                    new_target = new_target[key]
+                except KeyError:
+                    self._setResult(exceptions.InvalidReference(self.parentRef, key))
+                    return
+                # No errors
+                _consumeKey()
+            elif isinstance(new_target, collections_abc.Array):
+                try:
+                    key = int(key)
+                except ValueError:
+                    1/0
+                2/0
+            elif isinstance(new_target, TreeCls):
+                # wait for the next expansion step
+                try:
+                    new_target = self.currentTarget.getPartialResult(key)
+                except (KeyError, IndexError, ValueError):
+                    self._setResult(exceptions.InvalidReference(self.parentRef, key))
+                    return
+                _consumeKey()
+                break
+            elif isinstance(new_target, base.Expandable):
+                if new_target.isExpanded():
+                    new_target = new_target.getResult()
+                break # always wait for the next expansion loop.
+            else:
+                raise NotImplementedError(new_target)
+        print("NT", new_target)
+        if new_remaining:
+            self.pathRemaining = tuple(new_remaining)
+            self.currentTarget = new_target
+        else:
+            self._setResult(new_target)
+
+    def _setResult(self, result):
+        self.pathRemaining = None # Force for the walker to be expanded
+        self._result = result
+
+    def getResult(self):
+        rv = self._result
+        if isinstance(rv, Exception):
+            raise rv
+        return rv
+
+    def isExpanded(self):
+        return super(RefSubtreeWalker, self).isExpanded() and (not self.pathRemaining)
+
+    def __repr__(self):
+        return "<{} target={} path {{ remaining={} ; full={} }}>".format(
+            self.__class__.__name__, self.currentTarget,
+            self.pathRemaining, self.fullPath,
+        )
+
+class Ref(base.Base):
     """$ref expander."""
 
     key = '$ref'
@@ -51,7 +110,7 @@ class Ref(base.StatefulBase):
 
     _waitingForTree = None
 
-    def expand_start(self):
+    def expandStep(self):
         uri = self.data
         scheme = uri.scheme
         out_fn = None
@@ -63,9 +122,7 @@ class Ref(base.StatefulBase):
             # Direct tree reference.
             #  Only self-references are expected to work like this for now.
             assert uri.path == '__self__', uri.path
-            raise NotImplementedError
-            self._waitingForTreeFuture = self.root.expander.getFutureResult(self.data.anchor)
-            out_fn = self.waiting_for_tree_future
+            self._setSubTreeResult(self.root)
         else:
             raise exceptions.UnsupportedOperation("I don't know how to expand {!r} scheme ({})".format(
                 scheme,
@@ -73,16 +130,22 @@ class Ref(base.StatefulBase):
             ))
         return out_fn
 
-    _expandFn = expand_start
-
     def _setSubTreeResult(self, subTree):
         """Set an element of subtree as a result."""
         if self.data.anchor:
-            raise NotImplementedError
+            result = RefSubtreeWalker(
+                expansion_loop=self.expansion_loop,
+                parent_ref=self,
+                tree=subTree,
+                path=(
+                    el
+                    for el in self.data.anchor.split(pp.sep)
+                    if el # remove any empty elements
+                ),
+            )
         else:
             result = subTree
         self.setResult(result)
-        print(self, id(self))
         assert self.hasResult()
 
     def _expandFile(self, uri_path):

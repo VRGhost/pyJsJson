@@ -1,9 +1,9 @@
-import collections
 import logging
 
 from . import exceptions
 
 from .. import base as parentBase
+from .. import util
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +12,9 @@ def _findAllExpandables(obj):
     iter_in = ()
     if isinstance(obj, parentBase.Expandable):
         yield obj
-    elif isinstance(obj, (list, tuple)):
+    elif isinstance(obj, util.collections_abc.Array):
         iter_in = obj
-    elif isinstance(obj, collections.abc.Mapping):
+    elif isinstance(obj, util.collections_abc.Mapping):
         iter_in = obj.values()
 
     for el in iter_in:
@@ -79,19 +79,3 @@ class Base(parentBase.ExpandableData):
             self.hasResult(),
             id(self)
         )
-
-
-class StatefulBase(Base):
-    """A command that transitions through multiple implementations of expand() code.
-
-    The implementations of the expand function should return next function to be called or None
-    """
-
-    _expandFn = None
-
-    def expandStep(self):
-        if callable(self._expandFn):
-            assert not self.hasResult(), 'There has to be NO result set if the expand() chain is not done'
-            self._expandFn = self._expandFn()
-        else:
-            assert self.hasResult(), 'There has to be a result set if the expand() chain is done'

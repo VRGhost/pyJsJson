@@ -29,11 +29,11 @@ class JsonTreeRoot(ExpandableData):
             self._dependsOnRoots,
         )
 
-    def getStructPath(self, path):
-        return self.getInputData().getStructPath(path)
-
     def getResult(self):
         return convertToResults(self.getInputData())
+
+    def getPartialResult(self, path):
+        return self.getInputData().getPartialResult(path)
 
     def loadJsonFile(self, path):
         # Load another JSON file.
