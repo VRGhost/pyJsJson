@@ -72,7 +72,6 @@ class RefSubtreeWalker(Expandable):
                 break # always wait for the next expansion loop.
             else:
                 raise NotImplementedError(new_target)
-        print("NT", new_target)
         if new_remaining:
             self.pathRemaining = tuple(new_remaining)
             self.currentTarget = new_target

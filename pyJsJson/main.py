@@ -41,10 +41,7 @@ def main(args):
         search_dirs
     )
 
-    # Expand the tree
-    while not tree.isExpanded():
-        tree.expandStep()
-
+    expand.expandAll()
     out = tree.getResult()
 
     with contextlib.ExitStack() as stack:

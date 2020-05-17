@@ -45,9 +45,7 @@ class ExpansionLoop:
         self._needsSort = False
 
     def allExpanded(self):
-        print('----')
         for el in self._loop:
-            print(el, el.isExpanded())
             if not el.isExpanded():
                 return False
         return True
